@@ -1,0 +1,202 @@
+
+using Elsystem.collections;
+using elsystem.drawingobjects;
+using elsystem;
+
+
+Once clearprintlog;
+inputs:	
+	 AvgLength ( 24),
+	 ShorttermATRLength( 1),
+	 LongtermATRLength( 84), 
+	 num(100);
+
+variables:
+	ATR( 0 ),
+	Avg ( 0 ),
+	ShorttermATR(0),
+	LongtermATR(0),
+	count(0),
+	Insideonesd(0),
+	Insidetwosd(0),
+	TruerangeSD(0),
+	TruerangeStandardDev(0),
+	ii(0),
+	iii(0),
+	
+	horizontalline myhline(null),
+	horizontalline myhhline(null),
+	textlabel text1 (null),
+	textlabel text2(null),
+	highpt(0),
+	lowpt(0),
+	UniqueID( "+ 1SD"),
+	UniqueIDD( "- 1SD"),
+	BNpoint LowSDpoint(null),
+	BNpoint HighSDpoint(null),
+	dtpoint dtPoint1 (null),
+	dtpoint dtPoint2 (null),
+	
+	currentCandleStatus(0),
+	Time_difference(0);
+	
+ATR = AvgTrueRange( AvgLength ) ;
+LongtermATR = AvgTrueRange( LongtermATRLength ); 
+ShorttermATR = AverageFC(Truerange, shorttermatrLength);
+
+Plot1( ATR, !( "Average True range" ) ) ; 
+Plot2( ShorttermATR,!("ShorttermATR" ) );
+Plot9( Truerange, !("CurrentTR" ) );
+//Plot3 ( Longtermatr, !( "LongtermATR") );
+
+{If date = currentdate then 
+Begin
+	Plot4( TrueRange,!("Current True Range" ));
+	Plot5( TrueRange[1],!("True Range 1 day ago" ));
+	Plot6( TrueRange[2],!("True Range 2 days ago" ));
+	Plot7( TrueRange[3],!("True Range 3 days ago" ));
+End;}
+
+
+count = 0;
+Insideonesd = 0;
+Insidetwosd = 0;
+TruerangeSD = 0;
+TruerangeStandardDev = 0; 
+For ii = 1 to num //not 0 because the current bar has not closed yet, so we shouldn't take its data and treat it like it like the others. 
+Begin
+	TruerangeSD = TruerangeSD + Power((Truerange[ii]-Atr[ii]),2); //seperate logic(that's why it's indented.	
+	If ii = num then TruerangeStandardDev = Squareroot(TruerangeSD/num);
+	
+	If ii = num then 
+	Begin
+		For iii = 1 to num
+		Begin
+			if truerange[iii] <= Atr[iii]+TruerangeStandarddev and truerange[iii] >= Atr[iii]-TruerangeStandarddev then InsideOneSD = InsideOneSD + 1;
+			if truerange[iii] <= Atr[iii]+TruerangeStandarddev+TruerangeStandarddev and truerange[iii] >= Atr[iii]-TruerangeStandarddev-TruerangeStandarddev then InsidetwoSD = InsidetwoSD + 1;
+			Count = count + 1;
+		If iii = num then print("The last ", count, " bars, ", iff(count<>0, InsideoneSD/count,1)*100, " % of them were within 1SD. ", "And ", iff(count<>0, InsidetwoSD/count,1)*100, " % of them were within 2SD."  ); 
+		End;
+	End;
+end;
+
+
+
+
+Plot4(Atr+TruerangeStandarddev, !("+1SD"));
+Plot5(Atr-TruerangeStandarddev, !("-1SD"));
+Plot6(Atr+truerangeStandarddev+truerangeStandarddev, !("+2SD"));
+Plot7(Atr-truerangeStandarddev-truerangeStandarddev, !("-2SD"));
+
+////////////////////////////////////////////////////////////////////////
+// PLOT HORIZONTAL LINE
+
+Highpt = Truelow[0] + ATR + trueRangeStandardDev;
+Lowpt = TrueHigh[0] - ATR - trueRangeStandardDev;		
+If Highpt <> Highpt[1] or Lowpt <> Lowpt[1] Then Condition1 = true else condition1 = false;		
+		
+			
+If Drawingobjects.items[10].count >= 2 and condition1 = true then
+Begin
+	Drawingobjects.Delete((DrawingObjects.items[10] astype Vector) [0] astype Drawingobject);
+	Drawingobjects.Delete((DrawingObjects.items[10] astype Vector) [0] astype Drawingobject); //delete both lines
+	
+	Drawingobjects.Delete((DrawingObjects.items[4] astype Vector) [0] astype Drawingobject);
+	Drawingobjects.Delete((DrawingObjects.items[4] astype Vector) [0] astype Drawingobject);//delete both texts
+End;		
+		
+If condition1 = true or Drawingobjects.items[10].count = 0 then 
+begin
+	MyHline = Horizontalline.create(TrueLow[0] + ATR + trueRangeStandardDev); //Horizontalline 1
+	Drawingobjects.add(MyHline);
+	MyHline.tag = UniqueID astype string;
+	MyHline.color = elsystem.drawing.Color.gray;
+	MyHline.style = styletype.solid;
+	MyHline.weight = 0;
+	MyHline.Lock = true; 
+	
+	{Text1 = TextLabel.Create(dtpoint1.Create(bardatetime[0],TrueLow[0] + ATR + trueRangeStandardDev),numtostr(iff(count<>0, InsideoneSD/count,1)*100,2)+ !( "%" )); //Text1
+	DrawingObjects.Add(text1); 
+	text1.HStyle = 1;
+	text1.VStyle = VerticalStyle.Center;
+	text1.Font = elsystem.drawing.Font.Create( "Microsoft Sans Serif", 8, 0 );
+	text1.Lock = true;	}
+
+	MyHhline = Horizontalline.create(TrueHigh[0] - ATR - trueRangeStandardDev); // Horizontalline 2
+	Drawingobjects.add(MyHhline);
+	MyHhline.tag = UniqueIDD astype string;
+	MyHhline.color = elsystem.drawing.Color.gray;
+	MyHhline.style = styletype.solid;
+	MyHhline.weight = 0;
+	MyHhline.Lock = true;
+	
+	{Text2 = TextLabel.Create(dtpoint2.Create(bardatetime[0],TrueHigh[0] - ATR - trueRangeStandardDev),numtostr(iff(count<>0, InsideoneSD/count,1)*100,2)+ !( "%" )); //Text2
+	DrawingObjects.Add(Text2); 
+	text2.HStyle = 1;
+	text2.VStyle = VerticalStyle.Center;
+	text2.Font = elsystem.drawing.Font.Create( "Microsoft Sans Serif", 8, 0 );	 
+	text2.Lock = true;}
+End;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Candle Status:
+
+//initialize variables	
+Time_difference = ((time-currenttime)*.01)*60;
+//candlesession = (time-time[1]);
+
+//Daily
+If bartype = 2 then
+Begin
+	currentCandleStatus = 1-((1500 - currenttime)/650);
+End;
+
+//Minutes
+If bartype = 1 then 
+Begin
+	If barinterval = 480 then currentCandleStatus = 100*(1- (time_difference / 480)); 
+	If barinterval = 240 then currentCandleStatus = 100*(1- (time_difference / 240));
+	If barinterval = 120 then currentCandleStatus = 100*(1- (time_difference / 120));
+	If barinterval = 60 then currentCandleStatus = 100* (1- (time_difference / 60));
+	If barinterval = 15 then currentCandleStatus = 100*(1- (time_difference / 15));
+	If barinterval = 5 then currentCandleStatus = 100*(1- (time_difference / 5));
+	If barinterval = 3 then currentCandleStatus = 100*(1- (time_difference / 3));
+End;
+
+//print(currentcandlestatus,"%");
+//print((1- (time_difference / 60)));
+
+Begin
+	Text1 = TextLabel.Create(dtpoint1.Create(bardatetime[0],TrueLow[0] + ATR + trueRangeStandardDev),numtostr(currentcandlestatus,1)+ !( "%" )); //Text1
+	DrawingObjects.Add(text1); 
+	text1.HStyle = 1;
+	text1.VStyle = VerticalStyle.Center;
+	text1.Font = elsystem.drawing.Font.Create( "Microsoft Sans Serif", 8, 0 );
+	text1.Lock = true;	
+	
+	Text2 = TextLabel.Create(dtpoint2.Create(bardatetime[0],TrueHigh[0] - ATR - trueRangeStandardDev),numtostr(currentcandlestatus,1)+ !( "%" )); //Text2
+	DrawingObjects.Add(Text2); 
+	text2.HStyle = 1;
+	text2.VStyle = VerticalStyle.Center;
+	text2.Font = elsystem.drawing.Font.Create( "Microsoft Sans Serif", 8, 0 );	 
+	text2.Lock = true;
+End;
+
+If Drawingobjects.items[4].count > 2 then
+Begin
+	Drawingobjects.Delete((DrawingObjects.items[4] astype Vector) [0] astype Drawingobject);
+	Drawingobjects.Delete((DrawingObjects.items[4] astype Vector) [0] astype Drawingobject);
+End;
+
+
+
+
+{
+// Extend the plots to the right
+If LastBarOnChart = true then
+begin
+For Value1 = 0 to GetAppInfo( aiSpaceToRight ) - 1
+Begin
+Plot1[-1 * Value1]( FastAvg, "FastAvg", Magenta );
+Plot2[-1 * Value1]( SlowAvg, "SlowAvg", Yellow );
+End;	}
